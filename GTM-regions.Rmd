@@ -1,0 +1,50 @@
+---
+title: "GTM Areas"
+author: "James Hutt"
+date: "24/08/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(maps)
+library(mapdata)
+library(maptools)
+library(rgdal)
+library(ggmap)
+library(rgeos)
+library(broom)
+library(readr)
+library(skimr)
+library(tidyverse)
+```
+```{r}
+x <- read_csv("ethnic-population-by-local-authority.csv")
+```
+
+```{r}
+
+x <- x %>%
+  filter(Measure == "% of local population in this ethnic group") %>%
+  filter(Ethnicity_type == "ONS 2011 18+1") %>%
+  select(Ethnicity, Geography_name, Geography_code, Value, Numerator, Denominator) 
+
+skim(x)
+
+```
+
+```{r}
+
+#Load the shapefile - make sure you change the filepath to where you saved the shapefiles
+shapefile <- readOGR(dsn="Map_shapefiles", layer="Local_Administrative_Units_Level_1__December_2015__Boundaries")
+
+map <- ggplot() + geom_polygon(data = shapefile, aes(x = long, y = lat, group = group), colour = "black", fill = NA)
+
+map + theme_void()
+
+summary(shapefile@data)
+
+shapefile_df <- tidy(shapefile, region = "lau115cd")
+```
+
