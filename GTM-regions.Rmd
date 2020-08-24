@@ -18,33 +18,84 @@ library(broom)
 library(readr)
 library(skimr)
 library(tidyverse)
-```
-```{r}
-x <- read_csv("ethnic-population-by-local-authority.csv")
-```
 
-```{r}
+`%notin%` <- Negate(`%in%`)
+```
+```{r read_data, echo=FALSE}
+
+# Set Col Types
+
+col_types <- cols(
+  Measure = col_character(),
+  Time = col_double(),
+  Ethnicity = col_character(),
+  Ethnicity_type = col_character(),
+  Geography_name = col_character(),
+  Geography_code = col_character(),
+  Geography_type = col_character(),
+  Value = col_double(),
+  Numerator = col_double(),
+  Denominator = col_double()
+)
+
+# Read in the data 
+
+x <- read_csv("ethnic-population-by-local-authority.csv",
+              col_types = col_types)
+
+# Filter for the variables of interest. Commented out line allows selecting only
+# some ethnicities
 
 x <- x %>%
   filter(Measure == "% of local population in this ethnic group") %>%
   filter(Ethnicity_type == "ONS 2011 18+1") %>%
-  select(Ethnicity, Geography_name, Geography_code, Value, Numerator, Denominator) 
+  filter(Ethnicity %notin% c("White British")) %>%
+  mutate(id = Geography_code) %>%
+  select(Ethnicity, Geography_name, id , Value, Numerator, Denominator) 
 
-skim(x)
 
 ```
 
-```{r}
+```{r shapefile, include=FALSE}
 
-#Load the shapefile - make sure you change the filepath to where you saved the shapefiles
+# Load the shapefile
+
 shapefile <- readOGR(dsn="Map_shapefiles", layer="Local_Administrative_Units_Level_1__December_2015__Boundaries")
 
-map <- ggplot() + geom_polygon(data = shapefile, aes(x = long, y = lat, group = group), colour = "black", fill = NA)
-
-map + theme_void()
-
-summary(shapefile@data)
+# Tidy the shapefile into a DF format
 
 shapefile_df <- tidy(shapefile, region = "lau115cd")
+
+# Join the shapefile data with the ethnicity data above
+
+df <- left_join(shapefile_df, x, by="id")
+
+```
+
+```{r plot, echo=FALSE, warning=FALSE}
+
+#Create the heatmap using the ggplot2 package
+
+gg <- ggplot() + 
+  geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = Value), color = "#000000", size = 0.25) + 
+  facet_wrap(~ Ethnicity)
+
+gg <- gg + scale_fill_gradient2(low = "white", mid = "white", high = "red", na.value = "white")
+
+gg <- gg + coord_fixed(1)
+
+gg <- gg + theme_minimal()
+
+gg <- gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = 'right')
+
+gg <- gg + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank())
+
+gg <- gg + theme(axis.title.y=element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+
+print(gg)
+
+
+
+
 ```
 
