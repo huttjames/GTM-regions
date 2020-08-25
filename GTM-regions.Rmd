@@ -17,6 +17,8 @@ library(rgeos)
 library(broom)
 library(readr)
 library(skimr)
+library(readxl)
+library(gt)
 library(tidyverse)
 
 `%notin%` <- Negate(`%in%`)
@@ -49,7 +51,7 @@ x <- read_csv("ethnic-population-by-local-authority.csv",
 x <- x %>%
   filter(Measure == "% of local population in this ethnic group") %>%
   filter(Ethnicity_type == "ONS 2011 18+1") %>%
-  filter(Ethnicity %notin% c("White British")) %>%
+  filter(Ethnicity %in% c("Indian", "Bangladeshi", "Pakistani", "Asian Other")) %>%
   mutate(id = Geography_code) %>%
   select(Ethnicity, Geography_name, id , Value, Numerator, Denominator) 
 
@@ -80,7 +82,9 @@ gg <- ggplot() +
   geom_polygon(data = df, aes(x = long, y = lat, group = group, fill = Value), color = "#000000", size = 0.25) + 
   facet_wrap(~ Ethnicity)
 
-gg <- gg + scale_fill_gradient2(low = "white", mid = "white", high = "red", na.value = "white")
+colours = c("white", "yellow", "red", "blue", "black")
+
+gg <- gg + scale_fill_gradientn(colours = colours, na.value = "white", trans = "log", breaks = c(0, 1 , 5, 10, 30))
 
 gg <- gg + coord_fixed(1)
 
@@ -94,8 +98,18 @@ gg <- gg + theme(axis.title.y=element_blank(), axis.text.y = element_blank(), ax
 
 print(gg)
 
+```
+```{r gs_counties, echo=FALSE}
 
+gs <- read_xlsx("GS_counties.xlsx")
 
+View(gs)
+
+gs %>% 
+  group_by(REGION) %>%
+  summarise(GS = n()) %>%
+  arrange(-GS) %>%
+  gt()
 
 ```
 
